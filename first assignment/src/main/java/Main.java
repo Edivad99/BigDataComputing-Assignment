@@ -27,31 +27,26 @@ public class Main {
         JavaRDD<String> rawData = sc.textFile(args[3]).repartition(K).cache();
         System.out.println("Number of rows = " + rawData.count());
 
+        //      1             2           3          4           5           6          7          8
         //TransactionID,  ProductID, Description, Quantity, InvoiceDate, UnitPrice, CustomerID, Country
         JavaPairRDD<String, Integer> productCustomer = rawData
                 .flatMapToPair(row -> {
                     String[] info = row.split(",");
-
-                    List<Tuple2<String, Integer>> pair = new ArrayList<>();
+                    ArrayList<Tuple2<Tuple2<String, Integer>, Integer>> pairs = new ArrayList<>();
                     if(Integer.parseInt(info[3]) > 0) {
                         if(S.equals("all") || S.equals(info[7])) {
-                            pair.add(new Tuple2<>(info[1], Integer.parseInt(info[6])));
+                            pairs.add(new Tuple2<>(new Tuple2<>(info[1], Integer.parseInt(info[6])),0));
                         }
                     }
-                    return pair.iterator();
+                    return pairs.iterator();
                 })
                 .groupByKey()
-                .flatMapToPair(productCustomers -> {
-                    HashMap<Integer, Integer> counts = new HashMap<>();
+                .flatMapToPair((productCustomers) -> {
                     List<Tuple2<String, Integer>> pairs = new ArrayList<>();
-
-                    for (Integer customerID : productCustomers._2) {
-                        counts.put(customerID, 1 + counts.getOrDefault(customerID, 0));
-                    }
-
-                    for(Map.Entry<Integer, Integer> e: counts.entrySet()) {
-                        pairs.add(new Tuple2<>(productCustomers._1, e.getKey()));
-                    }
+                    /*Integer counter = 0;
+                    for (Object i: productCustomers._2)
+                        counter ++;*/
+                    pairs.add(new Tuple2<>(productCustomers._1._1, ((Collection<?>) productCustomers._2).size())); //counter
                     return pairs.iterator();
                 });
         System.out.println("Product-Customer Pairs = " + productCustomer.count());
