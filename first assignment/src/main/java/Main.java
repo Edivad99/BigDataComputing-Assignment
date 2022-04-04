@@ -32,7 +32,7 @@ public class Main {
         JavaPairRDD<String, Integer> productCustomer = rawData
                 .flatMapToPair(row -> {
                     String[] info = row.split(",");
-                    ArrayList<Tuple2<Tuple2<String, Integer>, Integer>> pairs = new ArrayList<>();
+                    List<Tuple2<Tuple2<String, Integer>, Integer>> pairs = new ArrayList<>();
                     if(Integer.parseInt(info[3]) > 0) {
                         if(S.equals("all") || S.equals(info[7])) {
                             pairs.add(new Tuple2<>(new Tuple2<>(info[1], Integer.parseInt(info[6])),0));
@@ -43,9 +43,6 @@ public class Main {
                 .groupByKey()
                 .flatMapToPair((productCustomers) -> {
                     List<Tuple2<String, Integer>> pairs = new ArrayList<>();
-                    /*Integer counter = 0;
-                    for (Object i: productCustomers._2)
-                        counter ++;*/
                     pairs.add(new Tuple2<>(productCustomers._1._1, ((Collection<?>) productCustomers._2).size())); //counter
                     return pairs.iterator();
                 });
