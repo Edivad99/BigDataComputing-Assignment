@@ -39,13 +39,8 @@ public class G025HW1 {
                     return pairs.iterator();
                 })
                 .groupByKey()
-                .flatMapToPair(productCustomers -> {
-                    List<Tuple2<String, Integer>> pairs = new ArrayList<>();
-                    pairs.add(new Tuple2<>(productCustomers._1._1, ((Collection<Integer>) productCustomers._2).size()));
-                    return pairs.iterator();
-                });
+                .mapToPair(productCustomers -> new Tuple2<>(productCustomers._1._1, 0));
         System.out.println("Product-Customer Pairs = " + productCustomer.count());
-
 
         JavaPairRDD<String, Integer> productPopularity1 = productCustomer
                 .mapPartitionsToPair(productCustomers -> {
