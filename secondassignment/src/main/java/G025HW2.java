@@ -1,12 +1,12 @@
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.stream.LongStream;
-
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
-import scala.collection.immutable.Stream;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 public class G025HW2 {
@@ -27,16 +27,7 @@ public class G025HW2 {
         long finish = System.currentTimeMillis();
         List<Vector> solution = (List<Vector>) results[3];
         double res = ComputeObjective(inputPoints, solution, z);
-        /*
-        Input size n = 15
-        Number of centers k = 3
-        Number of outliers z = 1
-        Initial guess = 0.04999999999999999
-        Final guess = 0.7999999999999998
-        Number of guesses = 5
-        Objective function = 1.562049935181331
-        Time of SeqWeightedOutliers = 422
-        */
+
 
         System.out.println("Input size n = " + inputPoints.size());
         System.out.println("Number of centers k = " + k);
@@ -134,11 +125,11 @@ public class G025HW2 {
     private static double ComputeObjective(ArrayList<Vector> inputPoints, List<Vector> solution, int z) {
         List<Double> results = new ArrayList<>();
         for(Vector x : inputPoints) {
-            double max = Double.MAX_VALUE;
+            double min = Double.MAX_VALUE;
             for(Vector s : solution) {
-                max = Math.min(max, Math.sqrt(Vectors.sqdist(x, s)));
+                min = Math.min(min, Math.sqrt(Vectors.sqdist(x, s)));
             }
-            results.add(max);
+            results.add(min);
         }
         Collections.sort(results);
         return Collections.max(results.subList(0, results.size() - z));
