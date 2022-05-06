@@ -10,6 +10,9 @@ import java.util.List;
 
 
 public class G025HW2 {
+    private static double INITIAL_GUESSES, FINAL_GUESSES;
+    private static int GUESSES_ATTEMPT;
+
     public static void main(String[] args) throws IOException {
         if (args.length != 3) {
             throw new IllegalArgumentException("USAGE: file_path k z");
@@ -23,18 +26,17 @@ public class G025HW2 {
         ArrayList<Long> weights = new ArrayList<>(Collections.nCopies(inputPoints.size(), 1L));
 
         long start = System.currentTimeMillis();
-        Object[] results = SeqWeightedOutliers(inputPoints, weights, k, z, 0);
+        List<Vector> solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0);
         long finish = System.currentTimeMillis();
-        List<Vector> solution = (List<Vector>) results[3];
         double res = ComputeObjective(inputPoints, solution, z);
 
 
         System.out.println("Input size n = " + inputPoints.size());
         System.out.println("Number of centers k = " + k);
         System.out.println("Number of outliers z = " + z);
-        System.out.println("Initial guess = " + results[0]);
-        System.out.println("Final guess = " + results[1]);
-        System.out.println("Number of guesses = " + results[2]);
+        System.out.println("Initial guess = " + INITIAL_GUESSES);
+        System.out.println("Final guess = " + FINAL_GUESSES);
+        System.out.println("Number of guesses = " + GUESSES_ATTEMPT);
         System.out.println("Objective function = " + res);
         System.out.println("Time of SeqWeightedOutliers = " + (finish - start));
     }
@@ -61,12 +63,10 @@ public class G025HW2 {
     }
 
 
-    private static Object[] SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
+    private static List<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
         List<Vector> points = P.subList(0, k + z + 1);
         double r = Double.MAX_VALUE;
-        double initial_guesses, final_guesses;
-        int guesses_attempt = 1;
-
+        GUESSES_ATTEMPT = 1;
 
         for(int i = 0; i < points.size(); i++) {
             for(int j = i + 1; j < points.size(); j++) {
@@ -75,7 +75,7 @@ public class G025HW2 {
             }
         }
         r = r/2;
-        initial_guesses = r;
+        INITIAL_GUESSES = r;
 
         while (true) {
             List<Vector> S = new ArrayList<>();
@@ -102,11 +102,11 @@ public class G025HW2 {
             }
 
             if(Wz <= z) {
-                final_guesses = r;
-                return new Object[] { initial_guesses, final_guesses, guesses_attempt, S };
+                FINAL_GUESSES = r;
+                return S;
             } else {
                 r = 2 * r;
-                guesses_attempt++;
+                GUESSES_ATTEMPT++;
             }
         }
     }
