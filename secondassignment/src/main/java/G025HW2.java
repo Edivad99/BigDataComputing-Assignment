@@ -1,5 +1,6 @@
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
+import scala.Tuple2;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -55,11 +56,10 @@ public class G025HW2 {
     }
 
 
-    static HashMap<Vector, Integer> positions = new HashMap<>();
-
     private static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
+        HashMap<Vector, Integer> positions = new HashMap<>();
         for (int i = 0; i < P.size(); i++) {
-            positions.putIfAbsent(P.get(i), i);
+            positions.put(P.get(i), i);
         }
 
         List<Vector> points = P.subList(0, k + z + 1);
@@ -84,14 +84,14 @@ public class G025HW2 {
             while (S.size() < k && Wz > 0) {
                 long max = -1;
                 Vector new_center = Vectors.dense(0, 0);
-                List<Vector> new_center_point = new ArrayList<>();
+                List<Tuple2<Vector, Long>> new_center_point = new ArrayList<>();
 
                 for (Vector point : P) {
-                    List<List<Vector>> res = Bz(point, (1 + 2 * alpha) * r, (3 + 4 * alpha) * r, Z);
+                    List<List<Tuple2<Vector, Long>>> res = Bz(point, (1 + 2 * alpha) * r, (3 + 4 * alpha) * r, Z, positions, W);
 
                     long ball_weight = res.get(0)
                             .stream()
-                            .mapToLong(y -> W.get(positions.get(y)))
+                            .mapToLong(y -> y._2)
                             .sum();
 
                     if (ball_weight > max) { // Seleziono il punto che "copre" più punti
@@ -102,9 +102,9 @@ public class G025HW2 {
                 }
                 S.add(new_center);
 
-                for (Vector y: new_center_point) {
-                    Z.remove(y);
-                    Wz = Wz - W.get(positions.get(y));
+                for (Tuple2<Vector, Long> y: new_center_point) {
+                    Z.remove(y._1);
+                    Wz = Wz - y._2;
                 }
             }
 
@@ -120,21 +120,28 @@ public class G025HW2 {
         }
     }
 
-    private static List<List<Vector>> Bz(Vector x, double radius, double radius2, Set<Vector> Z) {
+    private static List<List<Tuple2<Vector, Long>>> Bz(Vector x,
+                                                          double radius,
+                                                          double radius2,
+                                                          Set<Vector> Z,
+                                                          HashMap<Vector, Integer> positions,
+                                                          List<Long> W) {
         // BZ (x,r) = {y ∈ Z : d(x, y) ≤ r}.
-        List<Vector> list1 = Collections.synchronizedList(new ArrayList<>());
-        List<Vector> list2 = Collections.synchronizedList(new ArrayList<>());
+        List<Tuple2<Vector, Long>> list1 = new ArrayList<>();
+        List<Tuple2<Vector, Long>> list2 = new ArrayList<>();
 
-        Z.parallelStream().forEach(point -> {
+        Z.forEach(point -> {
             double distance = getDistance(x, point);
-            if (distance < radius) {
-                list1.add(point);
-            }
             if (distance < radius2) {
-                list2.add(point);
+                long weight = W.get(positions.get(point));
+                list2.add(new Tuple2<>(point, weight));
+
+                if (distance < radius) {
+                    list1.add(new Tuple2<>(point, weight));
+                }
             }
         });
-        List<List<Vector>> result = new ArrayList<>();
+        List<List<Tuple2<Vector, Long>>> result = new ArrayList<>();
         result.add(list1);
         result.add(list2);
         return result;
