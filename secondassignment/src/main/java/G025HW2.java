@@ -77,14 +77,13 @@ public class G025HW2 {
             ArrayList<Vector> S = new ArrayList<>();
             Set<Vector> Z = new HashSet<>(P);
             long Wz = WSUM;
-            final double localR = r;
 
             while (S.size() < k && Wz > 0) {
                 long max = -1;
                 Vector new_center = Vectors.dense(0, 0);
 
                 for (Vector point : P) {
-                    long ball_weight = BZ(Z, (1 + 2 * alpha) * localR, point)
+                    long ball_weight = BZ(Z, (1 + 2 * alpha) * r, point)
                             .mapToLong(x -> W.get(positions.get(x)))
                             .sum();
 
@@ -95,7 +94,7 @@ public class G025HW2 {
                 }
                 S.add(new_center);
 
-                List<Vector> new_center_point = BZ(Z, (3 + 4 * alpha) * localR, new_center).collect(Collectors.toList());
+                List<Vector> new_center_point = BZ(Z, (3 + 4 * alpha) * r, new_center).collect(Collectors.toList());
                 for (Vector t : new_center_point) {
                     Z.remove(t);
                     Wz -= W.get(positions.get(t));
