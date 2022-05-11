@@ -55,7 +55,13 @@ public class G025HW2 {
     }
 
 
-    private static List<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
+    static HashMap<Vector, Integer> positions = new HashMap<>();
+
+    private static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
+        for (int i = 0; i < P.size(); i++) {
+            positions.putIfAbsent(P.get(i), i);
+        }
+
         List<Vector> points = P.subList(0, k + z + 1);
         double r = Double.MAX_VALUE;
         int GUESSES_ATTEMPT = 1;
@@ -71,7 +77,7 @@ public class G025HW2 {
 
         final long WSUM = W.stream().mapToLong(Long::longValue).sum();
         while (true) {
-            List<Vector> S = new ArrayList<>();
+            ArrayList<Vector> S = new ArrayList<>();
             Set<Vector> Z = new HashSet<>(P);
             long Wz = WSUM;
 
@@ -79,9 +85,15 @@ public class G025HW2 {
                 long max = -1;
                 Vector new_center = Vectors.dense(0, 0);
                 List<Vector> new_center_point = new ArrayList<>();
+
                 for (Vector point : P) {
-                    List<List<Vector>> res = Bz4(point, (1 + 2 * alpha) * r, (3 + 4 * alpha) * r, Z);
-                    long ball_weight = res.get(0).stream().mapToLong(y -> W.get(P.indexOf(y))).sum();
+                    List<List<Vector>> res = Bz(point, (1 + 2 * alpha) * r, (3 + 4 * alpha) * r, Z);
+
+                    long ball_weight = res.get(0)
+                            .stream()
+                            .mapToLong(y -> W.get(positions.get(y)))
+                            .sum();
+
                     if (ball_weight > max) { // Seleziono il punto che "copre" più punti
                         max = ball_weight;
                         new_center = point;
@@ -92,7 +104,7 @@ public class G025HW2 {
 
                 for (Vector y: new_center_point) {
                     Z.remove(y);
-                    Wz = Wz - W.get(P.indexOf(y));
+                    Wz = Wz - W.get(positions.get(y));
                 }
             }
 
@@ -102,12 +114,13 @@ public class G025HW2 {
                 return S;
             } else {
                 r = 2 * r;
+                System.out.println("Updated guess = " + r);
                 GUESSES_ATTEMPT++;
             }
         }
     }
 
-    private static List<List<Vector>> Bz4(Vector x, double radius, double radius2, Set<Vector> Z) {
+    private static List<List<Vector>> Bz(Vector x, double radius, double radius2, Set<Vector> Z) {
         // BZ (x,r) = {y ∈ Z : d(x, y) ≤ r}.
         List<Vector> list1 = Collections.synchronizedList(new ArrayList<>());
         List<Vector> list2 = Collections.synchronizedList(new ArrayList<>());
@@ -127,6 +140,10 @@ public class G025HW2 {
         return result;
     }
 
+    private static double getDistance(Vector x, Vector y) {
+        return Math.sqrt(Vectors.sqdist(x, y));
+    }
+
     private static double ComputeObjective(ArrayList<Vector> inputPoints, List<Vector> solution, int z) {
         List<Double> results = new ArrayList<>();
         for (Vector x : inputPoints) {
@@ -138,26 +155,5 @@ public class G025HW2 {
         }
         Collections.sort(results);
         return Collections.max(results.subList(0, results.size() - z));
-    }
-
-    static HashMap<Vector, HashMap<Vector, Double>> map = new HashMap<>();
-
-    private static double getDistance(Vector x, Vector y) {
-        //String pair1 = x.toString() + "," + y.toString();
-        //String pair2 = y.toString() + "," + x.toString();
-
-        /*if (map.containsKey(pair1)) {
-            return map.get(pair1);
-        } else if (map.containsKey(pair2)){
-            return map.get(pair2);
-        }*/
-
-        //map.computeIfAbsent(x, e -> new HashMap<>()).computeIfAbsent(y, e -> Math.sqrt(Vectors.sqdist(x, y)));
-
-
-        //double distance = Math.sqrt(Vectors.sqdist(x, y));
-        //map.put(pair1, distance);
-        return Math.sqrt(Vectors.sqdist(x, y));
-        //return map.get(x).get(y);
     }
 }
