@@ -1,6 +1,5 @@
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
-import scala.Tuple2;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -58,24 +57,20 @@ public class G025HW2 {
 
     private static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
         HashMap<Vector, Integer> positions = new HashMap<>();
+        double r = Double.MAX_VALUE;
         for (int i = 0; i < P.size(); i++) {
             positions.put(P.get(i), i);
-        }
-
-        List<Vector> points = P.subList(0, k + z + 1);
-        double r = Double.MAX_VALUE;
-        int GUESSES_ATTEMPT = 1;
-
-        for (int i = 0; i < points.size(); i++) {
-            for (int j = i + 1; j < points.size(); j++) {
-                double distance = getDistance(points.get(i), points.get(j));
-                r = Math.min(r, distance);
+            if (i < k + z + 1) {
+                for (int j = i + 1; j < k + z + 1; j++) {
+                    r = Math.min(r, getDistance(P.get(i), P.get(j)));
+                }
             }
         }
         r = r / 2;
         System.out.println("Initial guess = " + r);
 
-        final long WSUM = W.stream().mapToLong(Long::longValue).sum();
+        int GUESSES_ATTEMPT = 1;
+        final long WSUM = W.stream().reduce(0L, Long::sum);
         while (true) {
             ArrayList<Vector> S = new ArrayList<>();
             Set<Vector> Z = new HashSet<>(P);
@@ -84,14 +79,14 @@ public class G025HW2 {
             while (S.size() < k && Wz > 0) {
                 long max = -1;
                 Vector new_center = Vectors.dense(0, 0);
-                List<Tuple2<Vector, Long>> new_center_point = new ArrayList<>();
+                List<Vector> new_center_point = new ArrayList<>();
 
                 for (Vector point : P) {
-                    List<List<Tuple2<Vector, Long>>> res = Bz(point, (1 + 2 * alpha) * r, (3 + 4 * alpha) * r, Z, positions, W);
+                    List<List<Vector>> res = Bz(point, (1 + 2 * alpha) * r, (3 + 4 * alpha) * r, Z);
 
                     long ball_weight = res.get(0)
                             .stream()
-                            .mapToLong(y -> y._2)
+                            .mapToLong(x -> W.get(positions.get(x)))
                             .sum();
 
                     if (ball_weight > max) { // Seleziono il punto che "copre" più punti
@@ -102,9 +97,9 @@ public class G025HW2 {
                 }
                 S.add(new_center);
 
-                for (Tuple2<Vector, Long> y: new_center_point) {
-                    Z.remove(y._1);
-                    Wz = Wz - y._2;
+                for (Vector t : new_center_point) {
+                    Z.remove(t);
+                    Wz -= W.get(positions.get(t));
                 }
             }
 
@@ -114,37 +109,30 @@ public class G025HW2 {
                 return S;
             } else {
                 r = 2 * r;
-                System.out.println("Updated guess = " + r);
                 GUESSES_ATTEMPT++;
             }
         }
     }
 
-    private static List<List<Tuple2<Vector, Long>>> Bz(Vector x,
-                                                          double radius,
-                                                          double radius2,
-                                                          Set<Vector> Z,
-                                                          HashMap<Vector, Integer> positions,
-                                                          List<Long> W) {
+    private static List<List<Vector>> Bz(Vector x,
+                                         double radius,
+                                         double radius2,
+                                         Set<Vector> Z) {
         // BZ (x,r) = {y ∈ Z : d(x, y) ≤ r}.
-        List<Tuple2<Vector, Long>> list1 = new ArrayList<>();
-        List<Tuple2<Vector, Long>> list2 = new ArrayList<>();
+        List<Vector> list1 = new ArrayList<>();
+        List<Vector> list2 = new ArrayList<>();
 
         Z.forEach(point -> {
             double distance = getDistance(x, point);
             if (distance < radius2) {
-                long weight = W.get(positions.get(point));
-                list2.add(new Tuple2<>(point, weight));
+                list2.add(point);
 
                 if (distance < radius) {
-                    list1.add(new Tuple2<>(point, weight));
+                    list1.add(point);
                 }
             }
         });
-        List<List<Tuple2<Vector, Long>>> result = new ArrayList<>();
-        result.add(list1);
-        result.add(list2);
-        return result;
+        return Arrays.asList(list1, list2);
     }
 
     private static double getDistance(Vector x, Vector y) {
