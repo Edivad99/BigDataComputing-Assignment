@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class G025HW2 {
@@ -81,26 +82,20 @@ public class G025HW2 {
             while (S.size() < k && Wz > 0) {
                 long max = -1;
                 Vector new_center = Vectors.dense(0, 0);
-                List<Vector> new_center_point = new ArrayList<>();
 
                 for (Vector point : P) {
-                    long ball_weight  = Z
-                            .parallelStream()
-                            .filter(x -> getDistance(x, point) < (1 + 2 * alpha) * localR)
+                    long ball_weight = BZ(Z, (1 + 2 * alpha) * localR, point)
                             .mapToLong(x -> W.get(positions.get(x)))
                             .sum();
 
                     if (ball_weight > max) { // Seleziono il punto che "copre" più punti
                         max = ball_weight;
                         new_center = point;
-                        new_center_point = Z
-                                .parallelStream()
-                                .filter(x -> getDistance(x, point) < (3 + 4 * alpha) * localR)
-                                .collect(Collectors.toList());
                     }
                 }
                 S.add(new_center);
 
+                List<Vector> new_center_point = BZ(Z, (3 + 4 * alpha) * localR, new_center).collect(Collectors.toList());
                 for (Vector t : new_center_point) {
                     Z.remove(t);
                     Wz -= W.get(positions.get(t));
@@ -116,6 +111,11 @@ public class G025HW2 {
                 GUESSES_ATTEMPT++;
             }
         }
+    }
+
+    private static Stream<Vector> BZ(Set<Vector> Z, double radius, Vector selected_center) {
+        return Z.parallelStream()
+                .filter(x -> getDistance(x, selected_center) < radius);
     }
 
     private static double getDistance(Vector x, Vector y) {
