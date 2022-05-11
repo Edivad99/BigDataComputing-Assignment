@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 public class G025HW2 {
@@ -82,17 +83,21 @@ public class G025HW2 {
                 List<Vector> new_center_point = new ArrayList<>();
 
                 for (Vector point : P) {
-                    List<List<Vector>> res = Bz(point, (1 + 2 * alpha) * r, (3 + 4 * alpha) * r, Z);
+                    final double localR = r;
 
-                    long ball_weight = res.get(0)
-                            .stream()
+                    long ball_weight  = Z
+                            .parallelStream()
+                            .filter(t -> getDistance(t, point) < (1 + 2 * alpha) * localR)
                             .mapToLong(x -> W.get(positions.get(x)))
                             .sum();
 
                     if (ball_weight > max) { // Seleziono il punto che "copre" più punti
                         max = ball_weight;
                         new_center = point;
-                        new_center_point = res.get(1);
+                        new_center_point = Z
+                                .parallelStream()
+                                .filter(x -> getDistance(x, point) < (3 + 4 * alpha) * localR)
+                                .collect(Collectors.toList());
                     }
                 }
                 S.add(new_center);
@@ -112,27 +117,6 @@ public class G025HW2 {
                 GUESSES_ATTEMPT++;
             }
         }
-    }
-
-    private static List<List<Vector>> Bz(Vector x,
-                                         double radius,
-                                         double radius2,
-                                         Set<Vector> Z) {
-        // BZ (x,r) = {y ∈ Z : d(x, y) ≤ r}.
-        List<Vector> list1 = new ArrayList<>();
-        List<Vector> list2 = new ArrayList<>();
-
-        Z.forEach(point -> {
-            double distance = getDistance(x, point);
-            if (distance < radius2) {
-                list2.add(point);
-
-                if (distance < radius) {
-                    list1.add(point);
-                }
-            }
-        });
-        return Arrays.asList(list1, list2);
     }
 
     private static double getDistance(Vector x, Vector y) {
