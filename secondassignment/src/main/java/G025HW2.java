@@ -78,17 +78,19 @@ public class G025HW2 {
             while (S.size() < k && Wz > 0) {
                 long max = -1;
                 Vector new_center = Vectors.dense(0, 0);
+                List<Vector> new_center_point = new ArrayList<>();
                 for (Vector point : P) {
-                    List<Vector> res = Bz(point, (1 + 2 * alpha) * r, Z);
-                    long ball_weight = res.stream().mapToLong(y -> W.get(P.indexOf(y))).sum();
-                    if (ball_weight > max) {
+                    List<List<Vector>> res = Bz4(point, (1 + 2 * alpha) * r, (3 + 4 * alpha) * r, Z);
+                    long ball_weight = res.get(0).stream().mapToLong(y -> W.get(P.indexOf(y))).sum();
+                    if (ball_weight > max) { // Seleziono il punto che "copre" più punti
                         max = ball_weight;
                         new_center = point;
+                        new_center_point = res.get(1);
                     }
                 }
                 S.add(new_center);
 
-                for (Vector y : Bz(new_center, (3 + 4 * alpha) * r, Z)) {
+                for (Vector y: new_center_point) {
                     Z.remove(y);
                     Wz = Wz - W.get(P.indexOf(y));
                 }
@@ -105,20 +107,24 @@ public class G025HW2 {
         }
     }
 
-    //static HashMap<Double, List<Vector>> hashMap = new HashMap<>();
-    private static List<Vector> Bz(Vector x, double radius, Set<Vector> Z) {
+    private static List<List<Vector>> Bz4(Vector x, double radius, double radius2, Set<Vector> Z) {
         // BZ (x,r) = {y ∈ Z : d(x, y) ≤ r}.
-        //if(hashMap.containsKey(radius))
-        //    return hashMap.get(radius);
+        List<Vector> list1 = Collections.synchronizedList(new ArrayList<>());
+        List<Vector> list2 = Collections.synchronizedList(new ArrayList<>());
 
-        List<Vector> res = new ArrayList<>();
-        for (Vector point : Z) {
-            if (getDistance(x, point) < radius) {
-                res.add(point);
+        Z.parallelStream().forEach(point -> {
+            double distance = getDistance(x, point);
+            if (distance < radius) {
+                list1.add(point);
             }
-        }
-        //hashMap.put(radius, res);
-        return res;
+            if (distance < radius2) {
+                list2.add(point);
+            }
+        });
+        List<List<Vector>> result = new ArrayList<>();
+        result.add(list1);
+        result.add(list2);
+        return result;
     }
 
     private static double ComputeObjective(ArrayList<Vector> inputPoints, List<Vector> solution, int z) {
@@ -134,7 +140,7 @@ public class G025HW2 {
         return Collections.max(results.subList(0, results.size() - z));
     }
 
-    static HashMap<String, Double> map = new HashMap<>();
+    static HashMap<Vector, HashMap<Vector, Double>> map = new HashMap<>();
 
     private static double getDistance(Vector x, Vector y) {
         //String pair1 = x.toString() + "," + y.toString();
@@ -146,8 +152,12 @@ public class G025HW2 {
             return map.get(pair2);
         }*/
 
-        double distance = Math.sqrt(Vectors.sqdist(x, y));
+        //map.computeIfAbsent(x, e -> new HashMap<>()).computeIfAbsent(y, e -> Math.sqrt(Vectors.sqdist(x, y)));
+
+
+        //double distance = Math.sqrt(Vectors.sqdist(x, y));
         //map.put(pair1, distance);
-        return distance;
+        return Math.sqrt(Vectors.sqdist(x, y));
+        //return map.get(x).get(y);
     }
 }
