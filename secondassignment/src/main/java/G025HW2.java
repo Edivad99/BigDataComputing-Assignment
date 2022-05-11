@@ -76,6 +76,7 @@ public class G025HW2 {
             ArrayList<Vector> S = new ArrayList<>();
             Set<Vector> Z = new HashSet<>(P);
             long Wz = WSUM;
+            final double localR = r;
 
             while (S.size() < k && Wz > 0) {
                 long max = -1;
@@ -83,11 +84,9 @@ public class G025HW2 {
                 List<Vector> new_center_point = new ArrayList<>();
 
                 for (Vector point : P) {
-                    final double localR = r;
-
                     long ball_weight  = Z
                             .parallelStream()
-                            .filter(t -> getDistance(t, point) < (1 + 2 * alpha) * localR)
+                            .filter(x -> getDistance(x, point) < (1 + 2 * alpha) * localR)
                             .mapToLong(x -> W.get(positions.get(x)))
                             .sum();
 
