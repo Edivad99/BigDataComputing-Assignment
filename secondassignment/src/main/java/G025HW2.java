@@ -56,16 +56,21 @@ public class G025HW2 {
         return result;
     }
 
-
     private static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
+        double [][] weights = new double[P.size()][P.size()];
         HashMap<Vector, Integer> positions = new HashMap<>();
-        double r = Double.MAX_VALUE;
-        for (int i = 0; i < P.size(); i++) {
+
+        for(int i = 0; i < P.size(); i++) {
             positions.put(P.get(i), i);
-            if (i < k + z + 1) {
-                for (int j = i + 1; j < k + z + 1; j++) {
-                    r = Math.min(r, getDistance(P.get(i), P.get(j)));
-                }
+            for(int j = 0; j < P.size(); j++) {
+                weights[i][j] = Math.sqrt(Vectors.sqdist(P.get(i), P.get(j)));
+            }
+        }
+
+        double r = Double.MAX_VALUE;
+        for (int i = 0; i < k + z + 1; i++) {
+            for (int j = i + 1; j < k + z + 1; j++) {
+                r = Math.min(r, weights[i][j]);
             }
         }
         r = r / 2;
@@ -83,7 +88,7 @@ public class G025HW2 {
                 Vector new_center = Vectors.dense(0, 0);
 
                 for (Vector point : P) {
-                    long ball_weight = BZ(Z, (1 + 2 * alpha) * r, point)
+                    long ball_weight = BZ(Z, (1 + 2 * alpha) * r, positions, weights[positions.get(point)])
                             .mapToLong(x -> W.get(positions.get(x)))
                             .sum();
 
@@ -94,7 +99,7 @@ public class G025HW2 {
                 }
                 S.add(new_center);
 
-                List<Vector> new_center_point = BZ(Z, (3 + 4 * alpha) * r, new_center).collect(Collectors.toList());
+                List<Vector> new_center_point = BZ(Z, (3 + 4 * alpha) * r, positions, weights[positions.get(new_center)]).collect(Collectors.toList());
                 for (Vector t : new_center_point) {
                     Z.remove(t);
                     Wz -= W.get(positions.get(t));
@@ -107,18 +112,18 @@ public class G025HW2 {
                 return S;
             } else {
                 r = 2 * r;
+                System.out.println("Updated guess = " + r);
                 GUESSES_ATTEMPT++;
             }
         }
     }
 
-    private static Stream<Vector> BZ(Set<Vector> Z, double radius, Vector selected_center) {
+    private static Stream<Vector> BZ(Set<Vector> Z,
+                                     double radius,
+                                     HashMap<Vector, Integer> positions,
+                                     double[] weights_selected_center) {
         return Z.parallelStream()
-                .filter(x -> getDistance(x, selected_center) < radius);
-    }
-
-    private static double getDistance(Vector x, Vector y) {
-        return Math.sqrt(Vectors.sqdist(x, y));
+                .filter(x -> weights_selected_center[positions.get(x)] < radius);
     }
 
     private static double ComputeObjective(ArrayList<Vector> inputPoints, List<Vector> solution, int z) {
@@ -126,7 +131,7 @@ public class G025HW2 {
         for (Vector x : inputPoints) {
             double min = Double.MAX_VALUE;
             for (Vector s : solution) {
-                min = Math.min(min, getDistance(x, s));
+                min = Math.min(min, Math.sqrt(Vectors.sqdist(x, s)));
             }
             results.add(min);
         }
