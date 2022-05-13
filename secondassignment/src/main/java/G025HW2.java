@@ -4,7 +4,10 @@ import org.apache.spark.mllib.linalg.Vectors;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -36,17 +39,17 @@ public class G025HW2 {
         System.out.println("Time of SeqWeightedOutliers = " + (finish - start));
     }
 
-    private static Vector strToVector(String str) {
+    public static Vector strToVector(String str) {
         String[] tokens = str.split(",");
         double[] data = new double[tokens.length];
-        for (int i = 0; i < tokens.length; i++) {
+        for (int i=0; i<tokens.length; i++) {
             data[i] = Double.parseDouble(tokens[i]);
         }
         return Vectors.dense(data);
     }
 
-    private static ArrayList<Vector> readVectorsSeq(String filename) throws IOException {
-        Path path = Path.of(filename);
+    public static ArrayList<Vector> readVectorsSeq(String filename) throws IOException {
+        Path path = Paths.get(filename);
         if (Files.isDirectory(path)) {
             throw new IllegalArgumentException("readVectorsSeq is meant to read a single file.");
         }
@@ -57,11 +60,13 @@ public class G025HW2 {
         return result;
     }
 
-    private static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
-        double [][] weights = new double[P.size()][P.size()];
 
-        for(int i = 0; i < P.size(); i++) {
-            for(int j = 0; j < P.size(); j++) {
+    private static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
+        final int PSIZE = P.size();
+        double[][] weights = new double[PSIZE][PSIZE];
+
+        for (int i = 0; i < PSIZE; i++) {
+            for (int j = 0; j < PSIZE; j++) {
                 weights[i][j] = Math.sqrt(Vectors.sqdist(P.get(i), P.get(j)));
             }
         }
@@ -76,29 +81,30 @@ public class G025HW2 {
         System.out.println("Initial guess = " + r);
 
         int GUESSES_ATTEMPT = 1;
-        final long WSUM = W.stream().reduce(0L, Long::sum);
-        final List<Integer> ZOriginal = IntStream.range(0, P.size()).boxed().collect(Collectors.toList());
+        final long WOriginal = W.stream().reduce(0L, Long::sum);
+        final List<Integer> ZOriginal = IntStream.range(0, PSIZE).boxed().collect(Collectors.toList());
         while (true) {
             ArrayList<Vector> S = new ArrayList<>();
             List<Integer> Z = new ArrayList<>(ZOriginal);
-            long Wz = WSUM;
+            long Wz = WOriginal;
 
             while (S.size() < k && Wz > 0) {
                 long max = -1;
                 int new_center_index = 0;
 
-                for (int pointIndex = 0; pointIndex < P.size(); pointIndex++) {
-                    long ball_weight = BZ(Z, (1 + 2 * alpha) * r, weights[pointIndex])
+                for (int pointIndex = 0; pointIndex < PSIZE; pointIndex++) {
+                    long ball_weight = FilterByRadius(Z, (1 + 2 * alpha) * r, weights[pointIndex])
                             .mapToLong(W::get)
                             .sum();
 
-                    if (ball_weight > max) { // Seleziono il punto che "copre" più punti
+                    if (ball_weight > max) {
                         max = ball_weight;
                         new_center_index = pointIndex;
                     }
                 }
                 S.add(P.get(new_center_index));
-                List<Integer> new_center_point = BZ(Z, (3 + 4 * alpha) * r, weights[new_center_index]).collect(Collectors.toList());
+                List<Integer> new_center_point = FilterByRadius(Z, (3 + 4 * alpha) * r, weights[new_center_index])
+                        .collect(Collectors.toList());
 
                 for (Integer t : new_center_point) {
                     Z.remove(t);
@@ -112,16 +118,13 @@ public class G025HW2 {
                 return S;
             } else {
                 r = 2 * r;
-                System.out.println("Updated guess = " + r);
                 GUESSES_ATTEMPT++;
             }
         }
     }
 
-    private static Stream<Integer> BZ(List<Integer> Z,
-                                     double radius,
-                                     double[] weights_selected_center) {
-        return Z.parallelStream()
+    private static Stream<Integer> FilterByRadius(List<Integer> Z, double radius, double[] weights_selected_center) {
+        return Z.stream()
                 .filter(x -> weights_selected_center[x] < radius);
     }
 
