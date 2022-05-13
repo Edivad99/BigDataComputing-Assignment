@@ -42,7 +42,7 @@ public class G025HW2 {
     public static Vector strToVector(String str) {
         String[] tokens = str.split(",");
         double[] data = new double[tokens.length];
-        for (int i=0; i<tokens.length; i++) {
+        for (int i = 0; i < tokens.length; i++) {
             data[i] = Double.parseDouble(tokens[i]);
         }
         return Vectors.dense(data);
