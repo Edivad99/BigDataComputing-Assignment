@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 
@@ -58,10 +59,8 @@ public class G025HW2 {
 
     private static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
         double [][] weights = new double[P.size()][P.size()];
-        HashMap<Vector, Integer> positions = new HashMap<>();
 
         for(int i = 0; i < P.size(); i++) {
-            positions.put(P.get(i), i);
             for(int j = 0; j < P.size(); j++) {
                 weights[i][j] = Math.sqrt(Vectors.sqdist(P.get(i), P.get(j)));
             }
@@ -78,31 +77,32 @@ public class G025HW2 {
 
         int GUESSES_ATTEMPT = 1;
         final long WSUM = W.stream().reduce(0L, Long::sum);
+        final List<Integer> ZOriginal = IntStream.range(0, P.size()).boxed().collect(Collectors.toList());
         while (true) {
             ArrayList<Vector> S = new ArrayList<>();
-            Set<Vector> Z = new HashSet<>(P);
+            List<Integer> Z = new ArrayList<>(ZOriginal);
             long Wz = WSUM;
 
             while (S.size() < k && Wz > 0) {
                 long max = -1;
-                Vector new_center = Vectors.dense(0, 0);
+                int new_center_index = 0;
 
-                for (Vector point : P) {
-                    long ball_weight = BZ(Z, (1 + 2 * alpha) * r, positions, weights[positions.get(point)])
-                            .mapToLong(x -> W.get(positions.get(x)))
+                for (int pointIndex = 0; pointIndex < P.size(); pointIndex++) {
+                    long ball_weight = BZ(Z, (1 + 2 * alpha) * r, weights[pointIndex])
+                            .mapToLong(W::get)
                             .sum();
 
                     if (ball_weight > max) { // Seleziono il punto che "copre" più punti
                         max = ball_weight;
-                        new_center = point;
+                        new_center_index = pointIndex;
                     }
                 }
-                S.add(new_center);
+                S.add(P.get(new_center_index));
+                List<Integer> new_center_point = BZ(Z, (3 + 4 * alpha) * r, weights[new_center_index]).collect(Collectors.toList());
 
-                List<Vector> new_center_point = BZ(Z, (3 + 4 * alpha) * r, positions, weights[positions.get(new_center)]).collect(Collectors.toList());
-                for (Vector t : new_center_point) {
+                for (Integer t : new_center_point) {
                     Z.remove(t);
-                    Wz -= W.get(positions.get(t));
+                    Wz -= W.get(t);
                 }
             }
 
@@ -118,12 +118,11 @@ public class G025HW2 {
         }
     }
 
-    private static Stream<Vector> BZ(Set<Vector> Z,
+    private static Stream<Integer> BZ(List<Integer> Z,
                                      double radius,
-                                     HashMap<Vector, Integer> positions,
                                      double[] weights_selected_center) {
         return Z.parallelStream()
-                .filter(x -> weights_selected_center[positions.get(x)] < radius);
+                .filter(x -> weights_selected_center[x] < radius);
     }
 
     private static double ComputeObjective(ArrayList<Vector> inputPoints, List<Vector> solution, int z) {
