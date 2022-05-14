@@ -31,11 +31,11 @@ public class G025HW2 {
         System.out.println("Number of outliers z = " + z);
 
         long start = System.currentTimeMillis();
-        List<Vector> solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0);
+        ArrayList<Vector> solution = SeqWeightedOutliers(inputPoints, weights, k, z, 0);
         long finish = System.currentTimeMillis();
-        double res = ComputeObjective(inputPoints, solution, z);
+        double objective = ComputeObjective(inputPoints, solution, z);
 
-        System.out.println("Objective function = " + res);
+        System.out.println("Objective function = " + objective);
         System.out.println("Time of SeqWeightedOutliers = " + (finish - start));
     }
 
@@ -61,18 +61,18 @@ public class G025HW2 {
     }
 
 
-    private static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P, List<Long> W, int k, int z, int alpha) {
+    private static ArrayList<Vector> SeqWeightedOutliers(ArrayList<Vector> P, ArrayList<Long> W, int k, int z, int alpha) {
         final int PSIZE = P.size();
-        double[][] weights = new double[PSIZE][PSIZE];
+        double[][] distances = new double[PSIZE][PSIZE];
 
         final int LIMIT = k + z + 1;
         double r = Double.MAX_VALUE;
         for (int i = 0; i < PSIZE; i++) {
-            weights[i][i] = 0; //Always 0 as distance
+            distances[i][i] = 0; //Always 0 as distance
             for (int j = i + 1; j < PSIZE; j++) {
                 double distance = Math.sqrt(Vectors.sqdist(P.get(i), P.get(j)));
-                weights[j][i] = distance;
-                weights[i][j] = distance;
+                distances[j][i] = distance;
+                distances[i][j] = distance;
                 if (i < LIMIT && j < LIMIT)
                     r = Math.min(r, distance);
             }
@@ -93,7 +93,7 @@ public class G025HW2 {
                 int new_center_index = 0;
 
                 for (int pointIndex = 0; pointIndex < PSIZE; pointIndex++) {
-                    long ball_weight = FilterByRadius(Z, (1 + 2 * alpha) * r, weights[pointIndex])
+                    long ball_weight = FilterByRadius(Z, (1 + 2 * alpha) * r, distances[pointIndex])
                             .mapToLong(W::get)
                             .sum();
 
@@ -103,7 +103,7 @@ public class G025HW2 {
                     }
                 }
                 S.add(P.get(new_center_index));
-                List<Integer> new_center_point = FilterByRadius(Z, (3 + 4 * alpha) * r, weights[new_center_index])
+                List<Integer> new_center_point = FilterByRadius(Z, (3 + 4 * alpha) * r, distances[new_center_index])
                         .collect(Collectors.toList());
 
                 for (Integer t : new_center_point) {
