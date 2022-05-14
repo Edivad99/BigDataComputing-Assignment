@@ -123,17 +123,17 @@ public class G025HW2 {
         }
     }
 
-    private static Stream<Integer> FilterByRadius(List<Integer> Z, double radius, double[] weights_selected_center) {
+    private static Stream<Integer> FilterByRadius(List<Integer> Z, double radius, double[] distances) {
         return Z.stream()
-                .filter(x -> weights_selected_center[x] < radius);
+                .filter(x -> distances[x] < radius);
     }
 
     private static double ComputeObjective(ArrayList<Vector> inputPoints, List<Vector> solution, int z) {
         List<Double> results = new ArrayList<>();
         for (Vector x : inputPoints) {
             double min = Double.MAX_VALUE;
-            for (Vector s : solution) {
-                min = Math.min(min, Math.sqrt(Vectors.sqdist(x, s)));
+            for (Vector v : solution) {
+                min = Math.min(min, Math.sqrt(Vectors.sqdist(x, v)));
             }
             results.add(min);
         }
