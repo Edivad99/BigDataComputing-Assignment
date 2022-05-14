@@ -65,16 +65,16 @@ public class G025HW2 {
         final int PSIZE = P.size();
         double[][] weights = new double[PSIZE][PSIZE];
 
-        for (int i = 0; i < PSIZE; i++) {
-            for (int j = 0; j < PSIZE; j++) {
-                weights[i][j] = Math.sqrt(Vectors.sqdist(P.get(i), P.get(j)));
-            }
-        }
-
+        final int LIMIT = k + z + 1;
         double r = Double.MAX_VALUE;
-        for (int i = 0; i < k + z + 1; i++) {
-            for (int j = i + 1; j < k + z + 1; j++) {
-                r = Math.min(r, weights[i][j]);
+        for (int i = 0; i < PSIZE; i++) {
+            weights[i][i] = 0; //Always 0 as distance
+            for (int j = i + 1; j < PSIZE; j++) {
+                double distance = Math.sqrt(Vectors.sqdist(P.get(i), P.get(j)));
+                weights[j][i] = distance;
+                weights[i][j] = distance;
+                if (i < LIMIT && j < LIMIT)
+                    r = Math.min(r, distance);
             }
         }
         r = r / 2;
