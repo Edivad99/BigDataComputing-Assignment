@@ -61,7 +61,6 @@ public class G025HW3 {
         end = System.currentTimeMillis();
         System.out.println("Objective function = " + objective);
         System.out.println("Time to compute objective function: " + (end - start) + " ms");
-
     }
 
     private static Vector strToVector(String str) {
@@ -178,7 +177,7 @@ public class G025HW3 {
         for (int i = 0; i < PSIZE; i++) {
             distances[i][i] = 0; //Always 0 as distance
             for (int j = i + 1; j < PSIZE; j++) {
-                double distance = Math.sqrt(Vectors.sqdist(P.get(i), P.get(j)));
+                double distance = euclidean(P.get(i), P.get(j));
                 distances[j][i] = distance;
                 distances[i][j] = distance;
                 if (i < LIMIT && j < LIMIT)
