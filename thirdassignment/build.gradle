@@ -1,0 +1,21 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+apply plugin: 'java'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(11)
+println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies{
+    implementation 'org.apache.spark:spark-core_2.12:3.2.1'
+    implementation 'org.apache.spark:spark-mllib_2.12:3.2.1'
+    implementation 'org.apache.hadoop:hadoop-client:3.3.2'
+}
