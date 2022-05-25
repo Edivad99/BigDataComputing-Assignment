@@ -96,7 +96,7 @@ public class G025HW3 {
             return c_w.iterator();
         }); // END OF ROUND 1
         long end = System.currentTimeMillis();
-        System.out.println("Time to compute round 1: " + (end - start) + " ms");
+        System.out.println("Time Round 1: " + (end - start) + " ms");
 
         //------------- ROUND 2 ---------------------------
         // In Round 2, it collects the weighted coreset into a local data structure and runs method SeqWeightedOutliers,
@@ -105,7 +105,7 @@ public class G025HW3 {
         start = System.currentTimeMillis();
         elems.addAll(coreset.collect());
         end = System.currentTimeMillis();
-        System.out.println("Time to compute round 2: " + (end - start) + " ms");
+        System.out.println("Time Round 2: " + (end - start) + " ms");
         //System.out.println("Elems dimension: " + elems.size());
         //
         // ****** ADD YOUR CODE
