@@ -76,7 +76,6 @@ public class G025HW3 {
         return Math.sqrt(Vectors.sqdist(a, b));
     }
 
-    // Method MR_kCenterOutliers: MR algorithm for k-center with outliers
     private static ArrayList<Vector> MR_kCenterOutliers(JavaRDD<Vector> points, int k, int z, int L) {
 
         //------------- ROUND 1 ---------------------------
@@ -93,6 +92,7 @@ public class G025HW3 {
                 Tuple2<Vector, Long> entry = new Tuple2<>(centers.get(i), weights.get(i));
                 c_w.add(i, entry);
             }
+            //System.out.println("Map dimension: " + c_w.size());
             return c_w.iterator();
         }); // END OF ROUND 1
         long end = System.currentTimeMillis();
@@ -101,11 +101,12 @@ public class G025HW3 {
         //------------- ROUND 2 ---------------------------
         // In Round 2, it collects the weighted coreset into a local data structure and runs method SeqWeightedOutliers,
         // "recycled" from Homework 2, to extract and return the final set of centers (you must fill in this latter part).
-        ArrayList<Tuple2<Vector, Long>> elems = new ArrayList<>((k + z) * L);
+        ArrayList<Tuple2<Vector, Long>> elems = new ArrayList<>((k + z + 1) * L);
         start = System.currentTimeMillis();
         elems.addAll(coreset.collect());
         end = System.currentTimeMillis();
         System.out.println("Time to compute round 2: " + (end - start) + " ms");
+        //System.out.println("Elems dimension: " + elems.size());
         //
         // ****** ADD YOUR CODE
         // ****** Compute the final solution (run SeqWeightedOutliers with alpha=2)
@@ -113,7 +114,6 @@ public class G025HW3 {
         // ****** Return the final solution
         List<Vector> vectors = elems.stream().map(x -> x._1).collect(Collectors.toList());
         List<Long> W = elems.stream().map(x -> x._2).collect(Collectors.toList());
-
         return SeqWeightedOutliers(vectors, W, k, z, 2);
     }
 
@@ -246,12 +246,12 @@ public class G025HW3 {
                     return pairs.iterator();
                 })
                 .groupByKey()
-                .mapToPair(x -> {
+                .mapToPair(tuple -> {
                     double min = Double.MAX_VALUE;
-                    for (Vector v : x._2) {
-                        min = Math.min(min, Math.sqrt(Vectors.sqdist(x._1, v)));
+                    for (Vector v : tuple._2) {
+                        min = Math.min(min, Math.sqrt(Vectors.sqdist(tuple._1, v)));
                     }
-                    return new Tuple2<>(min, x._1);
+                    return new Tuple2<>(min, tuple._1);
                 });
 
         List<Tuple2<Double, Vector>> last = result.sortByKey().take((int) result.count() - z);
