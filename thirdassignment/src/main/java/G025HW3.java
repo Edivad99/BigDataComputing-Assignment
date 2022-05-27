@@ -8,12 +8,11 @@ import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import scala.Tuple2;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class G025HW3 {
     public static void main(String[] args) {
@@ -57,7 +56,7 @@ public class G025HW3 {
 
         // ---- Compute the value of the objective function
         start = System.currentTimeMillis();
-        double objective = computeObjective(inputPoints, solution, z);
+        double objective = computeObjectiveOPT(inputPoints, solution, z);
         end = System.currentTimeMillis();
         System.out.println("Objective function = " + objective);
         System.out.println("Time to compute objective function: " + (end - start) + " ms");
@@ -269,5 +268,33 @@ public class G025HW3 {
         }
         Collections.sort(results);
         return Collections.max(results.subList(0, results.size() - z));*/
+    }
+
+    private static double computeObjectiveOPT(JavaRDD<Vector> points, ArrayList<Vector> centers, int z) {
+        List<Double> result = points
+                .flatMapToPair(p -> {
+                    Vector minVector = centers
+                            .stream()
+                            .min(Comparator.comparing(x -> Math.sqrt(Vectors.sqdist(p, x))))
+                            .orElseThrow(NoSuchElementException::new);
+
+                    List<Tuple2<Vector, Vector>> pairs = List.of(new Tuple2<>(p, minVector));
+                    return pairs.iterator();
+                })
+                .groupByKey()
+                .map(tuple -> {
+                    Vector minVector = StreamSupport.stream(tuple._2.spliterator(), false)
+                            .min(Comparator.comparing(x -> Math.sqrt(Vectors.sqdist(tuple._1, x))))
+                            .orElseThrow(NoSuchElementException::new);
+
+                    return Math.sqrt(Vectors.sqdist(tuple._1, minVector));
+                    //return new Tuple2<>(tuple._1, minVector);
+                })
+                //.groupByKey()
+                //.map(tuple -> Math.sqrt(Vectors.sqdist(tuple._1, tuple._2.iterator().next())))
+                .sortBy(Double::valueOf, true, 1)
+                .collect();
+
+        return Collections.max(result.subList(0, result.size() - z));
     }
 }
