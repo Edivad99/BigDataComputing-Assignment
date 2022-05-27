@@ -56,7 +56,7 @@ public class G025HW3 {
 
         // ---- Compute the value of the objective function
         start = System.currentTimeMillis();
-        double objective = computeObjectiveOPT(inputPoints, solution, z);
+        double objective = computeObjectiveOPT2(inputPoints, solution, z);
         end = System.currentTimeMillis();
         System.out.println("Objective function = " + objective);
         System.out.println("Time to compute objective function: " + (end - start) + " ms");
@@ -270,6 +270,7 @@ public class G025HW3 {
         return Collections.max(results.subList(0, results.size() - z));*/
     }
 
+    // Questa ci mette 230 ms in media
     private static double computeObjectiveOPT(JavaRDD<Vector> points, ArrayList<Vector> centers, int z) {
         List<Double> result = points
                 .flatMapToPair(p -> {
@@ -278,8 +279,26 @@ public class G025HW3 {
                             .min(Comparator.comparing(x -> Math.sqrt(Vectors.sqdist(p, x))))
                             .orElseThrow(NoSuchElementException::new);
 
-                    List<Tuple2<Vector, Vector>> pairs = List.of(new Tuple2<>(p, minVector));
-                    return pairs.iterator();
+                    return List.of(new Tuple2<>(p, minVector)).iterator();
+                })
+                .groupByKey()
+                .map(tuple -> Math.sqrt(Vectors.sqdist(tuple._1, tuple._2.iterator().next())))
+                .sortBy(Double::valueOf, true, 1)
+                .collect();
+
+        return Collections.max(result.subList(0, result.size() - z));
+    }
+
+    // Questa ci mette 330 ms in media
+    private static double computeObjectiveOPT2(JavaRDD<Vector> points, ArrayList<Vector> centers, int z) {
+        List<Double> result = points
+                .flatMapToPair(p -> {
+                    return centers
+                            .stream()
+                            .map(x -> new Tuple2<>(p, x))
+                            .collect(Collectors.toList())
+                            .iterator();
+
                 })
                 .groupByKey()
                 .map(tuple -> {
@@ -288,10 +307,7 @@ public class G025HW3 {
                             .orElseThrow(NoSuchElementException::new);
 
                     return Math.sqrt(Vectors.sqdist(tuple._1, minVector));
-                    //return new Tuple2<>(tuple._1, minVector);
                 })
-                //.groupByKey()
-                //.map(tuple -> Math.sqrt(Vectors.sqdist(tuple._1, tuple._2.iterator().next())))
                 .sortBy(Double::valueOf, true, 1)
                 .collect();
 
