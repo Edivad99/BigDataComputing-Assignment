@@ -1,7 +1,6 @@
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.mllib.linalg.Vector;
@@ -56,7 +55,7 @@ public class G025HW3 {
 
         // ---- Compute the value of the objective function
         start = System.currentTimeMillis();
-        double objective = computeObjectiveOPT2(inputPoints, solution, z);
+        double objective = computeObjective(inputPoints, solution, z);
         end = System.currentTimeMillis();
         System.out.println("Objective function = " + objective);
         System.out.println("Time to compute objective function: " + (end - start) + " ms");
@@ -235,39 +234,18 @@ public class G025HW3 {
     }
 
     private static double computeObjective(JavaRDD<Vector> points, ArrayList<Vector> centers, int z) {
-
-        JavaPairRDD<Double, Vector> result = points
-                .flatMapToPair(p -> {
-                    List<Tuple2<Vector, Vector>> pairs = new ArrayList<>();
-                    for (Vector v : centers) {
-                        pairs.add(new Tuple2<>(p, v));
-                    }
-                    return pairs.iterator();
-                })
-                .groupByKey()
-                .mapToPair(tuple -> {
-                    double min = Double.MAX_VALUE;
-                    for (Vector v : tuple._2) {
-                        min = Math.min(min, Math.sqrt(Vectors.sqdist(tuple._1, v)));
-                    }
-                    return new Tuple2<>(min, tuple._1);
-                });
-
-        List<Tuple2<Double, Vector>> last = result.sortByKey().take((int) result.count() - z);
-        return last.get(last.size() - 1)._1;
-
-
-        /*List<Vector> inputPoints = points.collect();
-        List<Double> results = new ArrayList<>();
-        for (Vector x : inputPoints) {
-            double min = Double.MAX_VALUE;
-            for (Vector v : centers) {
-                min = Math.min(min, Math.sqrt(Vectors.sqdist(x, v)));
-            }
-            results.add(min);
-        }
-        Collections.sort(results);
-        return Collections.max(results.subList(0, results.size() - z));*/
+        List<Double> results = points
+                .collect()
+                .stream()
+                .map(x -> centers
+                        .stream()
+                        .map(y -> euclidean(x, y))
+                        .min(Double::compareTo)
+                        .orElse(Double.MAX_VALUE)
+                )
+                .sorted()
+                .collect(Collectors.toList());
+        return Collections.max(results.subList(0, results.size() - z));
     }
 
     // Questa ci mette 230 ms in media
