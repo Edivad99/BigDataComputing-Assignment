@@ -7,11 +7,12 @@ import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import scala.Tuple2;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 public class G025HW3 {
     public static void main(String[] args) {
@@ -93,26 +94,26 @@ public class G025HW3 {
             //System.out.println("Map dimension: " + c_w.size());
             return c_w.iterator();
         }); // END OF ROUND 1
+        ArrayList<Tuple2<Vector, Long>> elems = new ArrayList<>((k + z + 1) * L);
+        elems.addAll(coreset.collect());
         long end = System.currentTimeMillis();
         System.out.println("Time Round 1: " + (end - start) + " ms");
 
         //------------- ROUND 2 ---------------------------
         // In Round 2, it collects the weighted coreset into a local data structure and runs method SeqWeightedOutliers,
         // "recycled" from Homework 2, to extract and return the final set of centers (you must fill in this latter part).
-        ArrayList<Tuple2<Vector, Long>> elems = new ArrayList<>((k + z + 1) * L);
-        start = System.currentTimeMillis();
-        elems.addAll(coreset.collect());
-        end = System.currentTimeMillis();
-        System.out.println("Time Round 2: " + (end - start) + " ms");
-        //System.out.println("Elems dimension: " + elems.size());
         //
         // ****** ADD YOUR CODE
         // ****** Compute the final solution (run SeqWeightedOutliers with alpha=2)
         // ****** Measure and print times taken by Round 1 and Round 2, separately
         // ****** Return the final solution
+        start = System.currentTimeMillis();
         List<Vector> vectors = elems.stream().map(x -> x._1).collect(Collectors.toList());
         List<Long> W = elems.stream().map(x -> x._2).collect(Collectors.toList());
-        return SeqWeightedOutliers(vectors, W, k, z, 2);
+        ArrayList<Vector> result = SeqWeightedOutliers(vectors, W, k, z, 2);
+        end = System.currentTimeMillis();
+        System.out.println("Time Round 2: " + (end - start) + " ms");
+        return result;
     }
 
     private static ArrayList<Vector> kCenterFFT(ArrayList<Vector> points, int k) {
@@ -234,61 +235,15 @@ public class G025HW3 {
     }
 
     private static double computeObjective(JavaRDD<Vector> points, ArrayList<Vector> centers, int z) {
-        List<Double> results = points
-                .collect()
-                .stream()
-                .map(x -> centers
+
+        List<Double> doubleList = points.map(x -> centers
                         .stream()
                         .map(y -> euclidean(x, y))
                         .min(Double::compareTo)
                         .orElse(Double.MAX_VALUE)
                 )
-                .sorted()
-                .collect(Collectors.toList());
-        return Collections.max(results.subList(0, results.size() - z));
-    }
-
-    // Questa ci mette 230 ms in media
-    private static double computeObjectiveOPT(JavaRDD<Vector> points, ArrayList<Vector> centers, int z) {
-        List<Double> result = points
-                .flatMapToPair(p -> {
-                    Vector minVector = centers
-                            .stream()
-                            .min(Comparator.comparing(x -> Math.sqrt(Vectors.sqdist(p, x))))
-                            .orElseThrow(NoSuchElementException::new);
-
-                    return List.of(new Tuple2<>(p, minVector)).iterator();
-                })
-                .groupByKey()
-                .map(tuple -> Math.sqrt(Vectors.sqdist(tuple._1, tuple._2.iterator().next())))
-                .sortBy(Double::valueOf, true, 1)
-                .collect();
-
-        return Collections.max(result.subList(0, result.size() - z));
-    }
-
-    // Questa ci mette 330 ms in media
-    private static double computeObjectiveOPT2(JavaRDD<Vector> points, ArrayList<Vector> centers, int z) {
-        List<Double> result = points
-                .flatMapToPair(p -> {
-                    return centers
-                            .stream()
-                            .map(x -> new Tuple2<>(p, x))
-                            .collect(Collectors.toList())
-                            .iterator();
-
-                })
-                .groupByKey()
-                .map(tuple -> {
-                    Vector minVector = StreamSupport.stream(tuple._2.spliterator(), false)
-                            .min(Comparator.comparing(x -> Math.sqrt(Vectors.sqdist(tuple._1, x))))
-                            .orElseThrow(NoSuchElementException::new);
-
-                    return Math.sqrt(Vectors.sqdist(tuple._1, minVector));
-                })
-                .sortBy(Double::valueOf, true, 1)
-                .collect();
-
-        return Collections.max(result.subList(0, result.size() - z));
+                .sortBy(Double::valueOf, false, points.getNumPartitions())
+                .take(z + 1);
+        return doubleList.get(doubleList.size() - 1);
     }
 }
