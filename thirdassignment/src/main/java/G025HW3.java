@@ -240,10 +240,9 @@ public class G025HW3 {
                         .stream()
                         .map(y -> euclidean(x, y))
                         .min(Double::compareTo)
-                        .orElse(Double.MAX_VALUE)
+                        .orElseThrow()
                 )
-                .sortBy(Double::valueOf, false, points.getNumPartitions())
-                .take(z + 1);
+                .top(z + 1);
         return doubleList.get(doubleList.size() - 1);
     }
 }
