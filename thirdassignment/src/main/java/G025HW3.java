@@ -240,7 +240,7 @@ public class G025HW3 {
                         .stream()
                         .map(y -> euclidean(x, y))
                         .min(Double::compareTo)
-                        .orElseThrow()
+                        .orElse(0.0)
                 )
                 .top(z + 1);
         return doubleList.get(doubleList.size() - 1);
